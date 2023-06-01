@@ -192,6 +192,23 @@ i.fa-chevron-down{
 .player-podium > .player-card.peak > .pfp-wrapper > .pfp{
     border-color: var(--first-place);
 }
+
+.player-podium > .player-card.peak > .card-text > .card-elo{
+    color: var(--first-place);
+
+}
+.player-podium > :first-child > .card-text > .card-elo{
+    color: var(--second-place);
+}
+
+.player-podium > :last-child > .card-text > .card-elo{
+    color: var(--third-place);
+}
+
+.player-podium > .player-card.peak > .card-elo{
+    color: var(--first-place);
+
+}
 .player-podium > .player-card.peak > .pfp-wrapper > .position-wrapper{
     background-color: var(--first-place);
 }
@@ -257,10 +274,12 @@ i.fa-chevron-down{
 }
 
 .card-name{
+    font-family: 600s;
     font-size: 1.6rem;
 }
 
 .card-elo{
+    font-weight: 700;
     font-size: 1.8rem;
 }
 
