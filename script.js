@@ -102,18 +102,38 @@ async function getSummonerChampions(encryptedId){
 }
 
 
-async function main() {
-    const topSummoners = await getTopPlayers();
-    
-    const remainingSummonersLeaderboard = document.querySelector('.summoners');
-    for (let summoner in topSummoners){
-        remainingSummonersLeaderboard.innerHTML += await createSummonerCard(topSummoners[summoner]);
-    }
-    await handleRowClickEvent();
+
+// 
+async function getPodium(topThree){
+    const switchedArray = [topThree[1], topThree[0], topThree[2]];
+    let podiumInnerHtml = '';
+    switchedArray.forEach((summoner, idx) => {
+        const recentChampImages = summoner.recentChampImages.map(x => `<img src="${x}" class="recent-champ">`).join('');
+        podiumInnerHtml += `
+        <div class="player-card ${idx === 1 ? 'peak' : ''}">
+            <div class="pfp-wrapper">
+                <img src="${summoner.pfp}" class="pfp">
+                    <div class="position-wrapper"></div>
+                <div class="position-text">${summoner.position}</div>
+            </div>
+            <div class="card-text">
+                <div class="card-name">${summoner.name}</div>
+                <div class="card-elo">${summoner.elo}</div>
+                <div class="card-wl">${summoner.wins}/${summoner.losses}</div>
+            </div>
+            <div class="champs-container">
+                <p>Recently-played:</p>
+                <div class="recent-champs">
+                    ${recentChampImages}
+                </div>
+            </div>
+        </div>`
+    })
+    return podiumInnerHtml;
 }
 
-async function createSummonerCard(summoner){
-    console.log('new row', summoner.hotStreak === true)
+
+async function getSummonerCard(summoner){
     const recentChampImages = summoner.recentChampImages.map(x => `<img src="${x}" class="recent-champ">`).join('');
     const html = `
     <div class="player-row">    
@@ -144,24 +164,71 @@ async function createSummonerCard(summoner){
    return html;
 }
 
-async function handleRowClickEvent(){
-    const mainRows = document.querySelectorAll('.player-row .main')
-    mainRows.forEach(row => {
+
+
+async function handleRowClick(){
+    const playerRows = document.querySelectorAll('.player-row .main')
+    playerRows.forEach(row => {
         row.addEventListener('click', e => {
-            const activeRow = document.querySelector('.player-row.active');
             const {currentTarget} = e;
             const {parentElement} = currentTarget;
-            
-            if (activeRow !== null && parentElement !== activeRow){
-                activeRow.classList.remove('active');
-                setTimeout(() => {parentElement.classList.add('active')}, 250)
-            } else if(activeRow !== null){
-                activeRow.classList.remove('active');
-            } else{
-                parentElement.classList.add('active');
-            }
-
+            const champsContainer =  parentElement.querySelector('.champs-container');;
+            handleRecentChampsLogic(champsContainer);
         })
     })
 }
-// main();
+async function handleCardClick(){
+    const playerPodium = document.querySelector('.player-podium');
+    const playerCards = document.querySelectorAll('.player-card');
+    const podiumChamps = document.querySelector('#podium-champs-container');
+    playerCards.forEach(card => {
+        card.addEventListener('click', e => {
+            const summonerChampsHTML = e.currentTarget.querySelector('.champs-container').innerHTML;
+            // cancel a refresh of same summoner
+            if (podiumChamps.innerHTML === summonerChampsHTML){
+                podiumChamps.classList.remove('active');
+                podiumChamps.innerHTML = '';
+                return;
+            // delay the data switch so the images can change off screen
+            } else if (podiumChamps.innerHTML !== summonerChampsHTML && podiumChamps.classList.contains('active')){
+                setTimeout(() => {
+                    podiumChamps.innerHTML = summonerChampsHTML;
+                },250)
+            } else{
+                podiumChamps.innerHTML = summonerChampsHTML;
+            }
+            handleRecentChampsLogic(podiumChamps);
+        })
+    })
+}
+
+function handleRecentChampsLogic(nextActiveElement){
+    const activeElement = document.querySelector('.active');
+    if (activeElement !== null && (nextActiveElement !== activeElement || 
+        (nextActiveElement === activeElement &&
+        activeElement.id === 'podium-champs-container'))){
+        activeElement.classList.remove('active');
+        setTimeout(() => {nextActiveElement.classList.add('active')}, 250)
+    } else if(activeElement !== null){
+        activeElement.classList.remove('active');
+    } else{
+        nextActiveElement.classList.add('active');
+    }
+}
+
+
+async function main() {
+    const topSummoners = await getTopPlayers();
+    
+    const remainingSummonersLeaderboard = document.querySelector('.summoners');
+    const playerPodium = document.querySelector('.player-podium');
+
+    playerPodium.innerHTML = await getPodium(topSummoners.slice(0,3));
+    for (let summoner in topSummoners.slice(3)){
+        remainingSummonersLeaderboard.innerHTML += await getSummonerCard(topSummoners.slice(3)[summoner]);
+    }
+    await handleCardClick();
+    await handleRowClick();
+}
+
+main();
