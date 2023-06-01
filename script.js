@@ -28,11 +28,8 @@ getArrayOfChampions();
 
 
 async function getImage(dragonLink, imageUrl){
-    document.write(dragonLink+imageUrl)
     const response = await fetch(dragonLink+imageUrl);
-    console.log(response);
     const data = await response.json();
-    console.log('img:',data)
     return data;
 }
 
@@ -77,8 +74,7 @@ async function getTopPlayers(){
             summoner['recentChampImages'].push(champImage);
         })
     }
-    console.log(topTenSummoners[0])
-    console.log(topTenSummoners.length)
+    console.log(topTenSummoners)
     return topTenSummoners;
 }
 
@@ -107,7 +103,65 @@ async function getSummonerChampions(encryptedId){
 
 
 async function main() {
-    const topPlayers = await getTopPlayers();
-    console.log(topPlayers);
+    const topSummoners = await getTopPlayers();
+    
+    const remainingSummonersLeaderboard = document.querySelector('.summoners');
+    for (let summoner in topSummoners){
+        remainingSummonersLeaderboard.innerHTML += await createSummonerCard(topSummoners[summoner]);
+    }
+    await handleRowClickEvent();
 }
-main();
+
+async function createSummonerCard(summoner){
+    console.log('new row', summoner.hotStreak === true)
+    const recentChampImages = summoner.recentChampImages.map(x => `<img src="${x}" class="recent-champ">`).join('');
+    const html = `
+    <div class="player-row">    
+        <div class="main">
+            <div class="pfp-wrapper">
+                <img src="${summoner.pfp}" alt="" class="pfp">
+                <div class="streak">
+                    <i class="fas fa-chevron-${summoner.hotStreak ? "up" : "down"}"></i>
+                </div>
+            </div>
+            <div class="summoner-name">${summoner.name}</div>
+            <div class="empty"></div>
+            <div class="win-loss">
+                <div class="wins">${summoner.wins}</div>
+                /
+                <div class="losses">${summoner.losses}</div>
+            </div>
+            <div class="league-points">${summoner.elo}</div>
+        </div>
+        <div class="champs-container">
+            <p>Recently played:</p>
+            <div class="recent-champs">
+                ${recentChampImages}
+            </div>
+        </div>
+    </div>
+   `
+   return html;
+}
+
+async function handleRowClickEvent(){
+    const mainRows = document.querySelectorAll('.player-row .main')
+    mainRows.forEach(row => {
+        row.addEventListener('click', e => {
+            const activeRow = document.querySelector('.player-row.active');
+            const {currentTarget} = e;
+            const {parentElement} = currentTarget;
+            
+            if (activeRow !== null && parentElement !== activeRow){
+                activeRow.classList.remove('active');
+                setTimeout(() => {parentElement.classList.add('active')}, 250)
+            } else if(activeRow !== null){
+                activeRow.classList.remove('active');
+            } else{
+                parentElement.classList.add('active');
+            }
+
+        })
+    })
+}
+// main();
