@@ -9,39 +9,94 @@ const headersData = {
     "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
     "Origin": "https://developer.riotgames.com"
 }
-async function getLeaderboard(){
+const characterImageUrl = 'http://ddragon.leagueoflegends.com/cdn/13.11.1/img/champion/';
+// append '.png' to pfp
+const profilePicUrl = 'http://ddragon.leagueoflegends.com/cdn/13.11.1/img/profileicon/'
+const backupProfilePic = '28.png';
+// get every champions data
+const champions = [];
+async function getArrayOfChampions(){
+    const response = await fetch(`http://ddragon.leagueoflegends.com/cdn/13.11.1/data/en_US/champion.json`, {
+        headers: headersData
+    })
+    const data = await response.json();
+    for (let champ in data.data){
+        champions.push(data.data[champ])
+    }
+}
+getArrayOfChampions();
+
+
+async function getImage(dragonLink, imageUrl){
+    document.write(dragonLink+imageUrl)
+    const response = await fetch(dragonLink+imageUrl);
+    console.log(response);
+    const data = await response.json();
+    console.log('img:',data)
+    return data;
+}
+
+async function getTopPlayers(){
     let fullLeaderboardUrl = naRegion + rankedQuery + "&api_key=" + key;
     const response = await fetch(fullLeaderboardUrl, {
         headers: headersData
     });
     const data = await response.json();
-    const topTenSummoners = data.slice(0,10);
+    // simplify data
+    let topTenSummoners = data.slice(0,10);
+    topTenSummoners = topTenSummoners.map(summoner => summoner = {
+            name: summoner.summonerName, 
+            id: summoner.summonerId,
+            position: topTenSummoners.indexOf(summoner) + 1,
+            elo: summoner.leaguePoints,
+            wins: summoner.wins,
+            losses: summoner.losses,
+            hotStreak: summoner.hotStreak,
+    })
+    // add image data to each summoner object
     for (let summoner of topTenSummoners){
+        summoner['recentChampImages'] = [];
+        summoner['pfp'] = '';
 
-        const summonerData = await getSummoner(summoner)
-        const summonerChamps = await getChampions(summoner.summonerId);
+        // get profile pic and handle error
+        let summonerData = await getSummoner(summoner);
+        if (summonerData !== undefined){
+            summoner['pfp'] = profilePicUrl+summonerData.profileIconId + '.png';        
+        } else{
+            summoner['pfp'] = profilePicUrl+ backupProfilePic;
+        }
+        // copy this array and sort by recently played.
+        let summonerChamps = await getSummonerChampions(summoner.id);
+        let recentlyPlayedChamps = summonerChamps.slice().sort((a,b) => b.lastPlayTime - a.lastPlayTime);
+        recentlyPlayedChamps = recentlyPlayedChamps.slice(0,3);
 
-        console.log('lb data: ', summoner);
-        console.log('summ data: ', summonerData);
-        console.log('summ champs', summonerChamps )
-        break;
-
+        // get champ images
+        recentlyPlayedChamps.forEach(recentChamp => {
+            const champion = champions.find(champ => champ.key == recentChamp.championId);
+            const champImage = characterImageUrl + champion.image.full;
+            summoner['recentChampImages'].push(champImage);
+        })
     }
-
-    // console.log(getSummoner(data[0].summonerName))
+    console.log(topTenSummoners[0])
+    console.log(topTenSummoners.length)
+    return topTenSummoners;
 }
 
 async function getSummoner(summoner){
     let summonerNameUrl = playerQuery + summoner.name;
     let fullSummonerNameUrl = naRegion + summonerNameUrl + "?api_key=" + key;
-    const response = await fetch(fullSummonerNameUrl,{
-        headers: headersData
-    })
-    const data = await response.json();
-    return data;
+    try{
+        const response = await fetch(fullSummonerNameUrl,{
+            headers: headersData
+        })
+        const data = await response.json()
+        return data;
+    }catch(error){
+        console.log(error);
+    }
 }
 
-async function getChampions(encryptedId){
+async function getSummonerChampions(encryptedId){
     let fullChampionMasteryUrl = naRegion + championQuery + encryptedId + "?api_key=" + key;
     const response = await fetch(fullChampionMasteryUrl,{
         headers: headersData
@@ -49,5 +104,10 @@ async function getChampions(encryptedId){
     const data = await response.json();
     return data;
 }
-const summonerNameTest = 'twtv Gryffinn';
-getLeaderboard();
+
+
+async function main() {
+    const topPlayers = await getTopPlayers();
+    console.log(topPlayers);
+}
+main();
